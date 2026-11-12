@@ -1,4 +1,3 @@
-import { Bot } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { ChatEntry } from "./chatStorage";
 import { EffectCards } from "./EffectCards";
@@ -7,23 +6,14 @@ import { RichText } from "./richText";
 const THINKING_LABEL = { chat: "Duely is thinking…", review: "Reviewing every unpaid invoice against your policy…" };
 
 function Message({ entry }: { entry: ChatEntry }) {
-  if (entry.role === "user") {
-    return (
-      <li className="flex justify-end">
-        <p className="max-w-[88%] rounded-2xl rounded-br-md bg-ink px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap text-paper">
-          <span className="sr-only">You: </span>
-          {entry.content}
-        </p>
-      </li>
-    );
-  }
+  const isUser = entry.role === "user";
   return (
-    <li className="animate-rise">
-      <div className="text-sm leading-relaxed break-words whitespace-pre-wrap text-ink">
-        <span className="sr-only">Duely: </span>
-        <RichText text={entry.content} />
+    <li>
+      <p className="text-xs text-muted">{isUser ? "You" : "Duely"}</p>
+      <div className="mt-0.5 text-sm leading-relaxed break-words whitespace-pre-wrap text-ink">
+        {isUser ? entry.content : <RichText text={entry.content} />}
       </div>
-      <EffectCards effects={entry.effects} />
+      {isUser ? null : <EffectCards effects={entry.effects} />}
     </li>
   );
 }
@@ -49,8 +39,7 @@ export function MessageList({ entries, pending }: MessageListProps) {
         <Message key={entry.id} entry={entry} />
       ))}
       {pending ? (
-        <li role="status" className="flex items-center gap-2 text-sm text-muted">
-          <Bot className="size-4 animate-pulse" aria-hidden="true" />
+        <li role="status" className="text-sm text-muted">
           {THINKING_LABEL[pending]}
         </li>
       ) : null}

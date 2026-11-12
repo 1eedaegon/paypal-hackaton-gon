@@ -31,7 +31,7 @@ describe("public routes render for a signed-out visitor", () => {
     expect(await screen.findByRole("heading", { level: 1, name: /get paid on time/i })).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /get started free/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /see how it works/i })).toBeTruthy();
-    expect(screen.getByText(/PayPal Invoicing, PayPal Webhooks, Google Gemini/)).toBeTruthy();
+    expect(screen.getByText(/Built on PayPal Invoicing, PayPal Webhooks, Google Gemini\./)).toBeTruthy();
     expect(screen.getByText(/Built for the PayPal AI Hackathon/)).toBeTruthy();
   });
 

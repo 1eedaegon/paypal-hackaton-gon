@@ -1,4 +1,3 @@
-import { ArrowUp } from "lucide-react";
 import { useId } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { Button } from "../../components/Button";
@@ -32,7 +31,7 @@ export function Composer({ value, onChange, onSubmit, pending, disabled }: Compo
   };
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-line-strong bg-surface focus-within:border-accent">
+    <form onSubmit={submit} className="rounded-lg border border-line-strong bg-surface focus-within:border-accent">
       <label htmlFor={inputId} className="sr-only">
         Message to the Duely agent
       </label>
@@ -44,10 +43,10 @@ export function Composer({ value, onChange, onSubmit, pending, disabled }: Compo
         onKeyDown={submitOnEnter}
         disabled={disabled}
         placeholder="Paste a client message or tell Duely what to bill..."
-        className="block w-full resize-none rounded-t-xl bg-transparent px-3 pt-3 pb-1 text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none disabled:text-muted"
+        className="block w-full resize-none rounded-t-lg bg-transparent px-3 pt-3 pb-1 text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none disabled:text-muted"
       />
       <div className="flex items-center justify-between gap-2 px-2 pb-2">
-        <p className={cx("pl-1 text-xs", tooLong ? "font-medium text-danger" : "text-muted")}>
+        <p className={cx("pl-1 text-xs", tooLong ? "text-danger" : "text-muted")}>
           {value.length > COUNTER_THRESHOLD
             ? `${value.length.toLocaleString("en-US")} / ${MAX_CHAT_MESSAGE_LENGTH.toLocaleString("en-US")}`
             : "Enter to send, Shift+Enter for a new line"}
@@ -58,7 +57,6 @@ export function Composer({ value, onChange, onSubmit, pending, disabled }: Compo
           size="sm"
           pending={pending}
           disabled={disabled || tooLong || value.trim() === ""}
-          icon={<ArrowUp className="size-4" aria-hidden="true" />}
         >
           Send
         </Button>

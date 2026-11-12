@@ -14,10 +14,10 @@ import { InvoiceActions } from "./InvoiceActions";
 import { InvoiceFacts, ItemsTable } from "./InvoiceFacts";
 import { invoiceLabel } from "./invoiceLogic";
 import { PayLink } from "./PayLink";
-import { StatusPill } from "./StatusPill";
+import { InvoiceStatusText } from "./StatusText";
 
 const DETAIL_POLL_MS = 4000;
-const SECTION_TITLE = "text-xs font-medium tracking-wide text-muted uppercase";
+const SECTION_TITLE = "text-xs text-muted";
 
 interface DrawerBodyProps {
   detail: InvoiceDetail;
@@ -47,9 +47,9 @@ function DrawerBody({ detail, onChanged, onClose }: DrawerBodyProps) {
       {invoice.pay_url ? <PayLink url={invoice.pay_url} /> : null}
       {invoice.status !== "draft" ? <InvoiceActions invoice={invoice} onChanged={onChanged} /> : null}
       {pendingCount > 0 ? (
-        <p className="rounded-xl border border-amber-line bg-amber-soft px-3 py-2 text-sm text-amber">
+        <p className="text-sm text-muted">
           A reminder for this invoice is waiting for your approval.{" "}
-          <button type="button" onClick={reviewInApprovals} className="rounded font-medium underline">
+          <button type="button" onClick={reviewInApprovals} className="rounded font-medium text-accent underline underline-offset-2">
             Review it in Approvals
           </button>
         </p>
@@ -88,12 +88,13 @@ function DrawerContent({ invoiceId, titleId, onClose }: { invoiceId: string; tit
       <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
         <div className="min-w-0">
           <p className="money text-xs text-muted">{data ? invoiceLabel(data.invoice) : "Invoice"}</p>
-          <h2 id={titleId} className="truncate font-display text-2xl font-medium">
+          <h2 id={titleId} className="truncate text-xl font-medium">
             {data ? data.invoice.recipient_name : "Loading…"}
           </h2>
           {data ? (
             <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-              <StatusPill invoice={data.invoice} />
+              <InvoiceStatusText invoice={data.invoice} />
+              <span aria-hidden="true">·</span>
               <span className="truncate">{data.invoice.recipient_email}</span>
             </p>
           ) : null}
@@ -102,7 +103,7 @@ function DrawerContent({ invoiceId, titleId, onClose }: { invoiceId: string; tit
           type="button"
           onClick={onClose}
           aria-label="Close invoice details"
-          className="rounded-md p-2 text-muted hover:bg-paper-deep hover:text-ink"
+          className="rounded-md p-2 text-muted hover:text-ink"
         >
           <X className="size-5" aria-hidden="true" />
         </button>

@@ -1,5 +1,5 @@
 import { LoaderCircle } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes } from "react";
 import { cx } from "../lib/cx";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -10,7 +10,6 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
   pending?: boolean;
   pendingLabel?: string;
-  icon?: ReactNode;
 }
 
 const BASE =
@@ -19,14 +18,14 @@ const BASE =
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-accent text-white hover:bg-accent-strong border border-accent",
   secondary: "bg-surface text-ink border border-line-strong hover:bg-paper-deep",
-  ghost: "text-ink-soft hover:bg-paper-deep hover:text-ink border border-transparent",
-  danger: "bg-surface text-danger border border-danger/40 hover:bg-danger-soft",
+  ghost: "text-muted hover:text-ink border border-transparent",
+  danger: "bg-surface text-danger border border-line-strong hover:bg-paper-deep",
 };
 
 const SIZES: Record<Size, string> = {
   sm: "min-h-9 px-3 text-sm",
   md: "min-h-10 px-4 text-sm",
-  lg: "min-h-12 px-6 text-base",
+  lg: "min-h-11 px-5 text-base",
 };
 
 export function buttonClass(variant: Variant = "secondary", size: Size = "md", extra?: string): string {
@@ -38,7 +37,6 @@ export function Button({
   size = "md",
   pending = false,
   pendingLabel,
-  icon,
   className,
   children,
   disabled,
@@ -53,7 +51,7 @@ export function Button({
       aria-busy={pending || undefined}
       {...rest}
     >
-      {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : icon}
+      {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
       {pending && pendingLabel ? pendingLabel : children}
     </button>
   );

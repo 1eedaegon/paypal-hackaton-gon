@@ -59,11 +59,11 @@ describe("workspace for a signed-in user", () => {
     expect(screen.getByDisplayValue("Northwind Studio")).toBeTruthy();
 
     const rows = screen.getAllByRole("button", { name: /Harbor & Co\.|Lumen Labs/ });
-    expect(rows[0]?.getAttribute("aria-label")).toBe("Harbor & Co., Invoice 0042, $860.00, due Nov 20, Overdue 9d, No reminders");
+    expect(rows[0]?.getAttribute("aria-label")).toBe("Harbor & Co., Invoice 0042, $860.00, due Nov 20, Overdue 9 days, No reminders");
     expect(rows[1]?.getAttribute("aria-label")).toContain("Lumen Labs, Invoice 0003, $1,200.00");
     expect(rows[1]?.getAttribute("aria-label")).toContain("Paid");
 
-    expect(screen.getByRole("tab", { name: "Approvals, 1 waiting for approval" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Approvals (1)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Run collection review" })).toBeTruthy();
     expect(screen.getByPlaceholderText("Paste a client message or tell Duely what to bill...")).toBeTruthy();
   });

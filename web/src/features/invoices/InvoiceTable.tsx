@@ -1,11 +1,10 @@
-import { ChevronRight } from "lucide-react";
 import { formatDate, formatMoney, pluralize } from "../../lib/format";
 import type { Invoice } from "../../lib/types";
 import { invoiceLabel, invoiceStatus } from "./invoiceLogic";
-import { StatusPill } from "./StatusPill";
+import { InvoiceStatusText } from "./StatusText";
 
 const COLUMNS =
-  "sm:grid sm:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_4.5rem_7rem_4.5rem_6.5rem_1rem] sm:items-center sm:gap-3";
+  "sm:grid sm:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)_4.5rem_8rem_5.5rem_6.5rem] sm:items-center sm:gap-3";
 
 function reminderText(count: number): string {
   return count === 0 ? "No reminders" : pluralize(count, "reminder");
@@ -30,30 +29,23 @@ function InvoiceRow({ invoice, onOpen }: { invoice: Invoice; onOpen: (id: string
         type="button"
         aria-label={invoiceRowLabel(invoice)}
         onClick={() => onOpen(invoice.id)}
-        className={`w-full px-4 py-3 text-left transition-colors hover:bg-paper ${COLUMNS}`}
+        className={`w-full px-4 py-3 text-left transition-colors hover:bg-paper-deep ${COLUMNS}`}
       >
         <span className="flex items-baseline justify-between gap-3 sm:block sm:min-w-0">
           <span className="block truncate text-sm font-medium text-ink">{invoice.recipient_name}</span>
           <span className="money text-sm font-medium sm:hidden">{formatMoney(invoice.total)}</span>
           <span className="hidden truncate text-xs text-muted sm:block">{invoice.recipient_email}</span>
         </span>
-        <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:contents sm:text-sm">
-          <span className="money truncate sm:text-ink-soft">{invoice.number ?? "No number"}</span>
-          <span className="sm:text-ink-soft">
+        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:contents sm:text-sm">
+          <span className="money truncate">{invoice.number ?? "No number"}</span>
+          <span>
             <span className="sm:hidden">Due </span>
             {formatDate(invoice.due_date)}
           </span>
-          <span>
-            <StatusPill invoice={invoice} />
-          </span>
-          <span className="money text-xs">
+          <InvoiceStatusText invoice={invoice} />
+          <span className="money">
             {invoice.reminder_count === 0 ? (
-              <>
-                <span aria-hidden="true" className="hidden sm:inline">
-                  –
-                </span>
-                <span className="sr-only">{reminderText(0)}</span>
-              </>
+              <span className="hidden sm:inline">None</span>
             ) : (
               <>
                 <span className="sm:hidden">{reminderText(invoice.reminder_count)}</span>
@@ -65,7 +57,6 @@ function InvoiceRow({ invoice, onOpen }: { invoice: Invoice; onOpen: (id: string
         <span className="money hidden text-right text-sm font-medium text-ink sm:block">
           {formatMoney(invoice.total)}
         </span>
-        <ChevronRight className="hidden size-4 text-muted sm:block" aria-hidden="true" />
       </button>
     </li>
   );
@@ -73,18 +64,14 @@ function InvoiceRow({ invoice, onOpen }: { invoice: Invoice; onOpen: (id: string
 
 export function InvoiceTable({ invoices, onOpen }: { invoices: readonly Invoice[]; onOpen: (id: string) => void }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <div
-        aria-hidden="true"
-        className={`hidden border-b border-line bg-paper px-4 py-2 text-xs font-medium tracking-wide text-muted uppercase ${COLUMNS}`}
-      >
+    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+      <div aria-hidden="true" className={`hidden border-b border-line px-4 py-2 text-xs text-muted ${COLUMNS}`}>
         <span>Client</span>
         <span>Invoice</span>
         <span>Due</span>
         <span>Status</span>
         <span>Reminders</span>
         <span className="text-right">Amount</span>
-        <span />
       </div>
       <ul>
         {invoices.map((invoice) => (

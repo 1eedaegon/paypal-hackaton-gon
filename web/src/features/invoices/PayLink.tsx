@@ -1,4 +1,3 @@
-import { Check, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { buttonClass, Button } from "../../components/Button";
 import { useToast } from "../../components/Toast";
@@ -21,26 +20,15 @@ export function PayLink({ url }: { url: string }) {
   };
 
   return (
-    <div className="rounded-xl border border-line bg-paper p-3">
-      <p className="text-xs font-medium tracking-wide text-muted uppercase">PayPal payment link</p>
-      <p className="mt-1 text-sm break-all text-ink-soft select-all">{url}</p>
+    <div>
+      <p className="text-xs text-muted">PayPal payment link</p>
+      <p className="mt-1 text-sm break-all text-ink select-all">{url}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <a href={url} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "sm")}>
-          <ExternalLink className="size-4" aria-hidden="true" />
           Open payment page
           <span className="sr-only">(opens in a new tab)</span>
         </a>
-        <Button
-          size="sm"
-          onClick={copy}
-          icon={
-            copied ? (
-              <Check className="size-4 text-accent" aria-hidden="true" />
-            ) : (
-              <Copy className="size-4" aria-hidden="true" />
-            )
-          }
-        >
+        <Button size="sm" onClick={copy}>
           {copied ? "Copied" : "Copy link"}
         </Button>
       </div>

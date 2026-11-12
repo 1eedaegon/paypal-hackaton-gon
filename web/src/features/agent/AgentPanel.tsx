@@ -1,4 +1,3 @@
-import { ListChecks, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/Button";
 import { cx } from "../../lib/cx";
@@ -41,13 +40,10 @@ export function AgentPanel({ userId, onPolicyUpdated, className }: AgentPanelPro
   return (
     <section
       aria-label="Duely agent"
-      className={cx("flex min-h-0 flex-col rounded-2xl border border-line-strong bg-paper-deep/60", className)}
+      className={cx("flex min-h-0 flex-col rounded-lg border border-line bg-surface", className)}
     >
       <header className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
-        <h2 className="inline-flex items-center gap-2 font-display text-lg font-medium">
-          <Sparkles className="size-4 text-accent" aria-hidden="true" />
-          Agent
-        </h2>
+        <h2 className="text-base font-medium">Agent</h2>
         {chat.entries.length > 0 ? (
           <button
             type="button"
@@ -68,16 +64,15 @@ export function AgentPanel({ userId, onPolicyUpdated, className }: AgentPanelPro
       </div>
       <div className="flex flex-col gap-2 border-t border-line px-3 py-3">
         {chat.error ? (
-          <p role="alert" className="rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p role="alert" className="px-1 text-sm text-danger">
             {chat.error}
           </p>
         ) : null}
         {quotaUsedUp && !chat.error ? (
-          <p className="rounded-lg border border-amber-line bg-amber-soft px-3 py-2 text-sm text-amber">{QUOTA_NOTE}</p>
+          <p className="px-1 text-sm text-muted">{QUOTA_NOTE}</p>
         ) : null}
         <Button
           size="sm"
-          icon={<ListChecks className="size-4" aria-hidden="true" />}
           onClick={chat.runReview}
           pending={chat.pending === "review"}
           pendingLabel="Reviewing…"

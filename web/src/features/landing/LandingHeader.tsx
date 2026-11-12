@@ -4,7 +4,7 @@ import { Logo } from "../../components/Logo";
 
 export function LandingHeader({ signedIn }: { signedIn: boolean }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-line/70 bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-line bg-paper">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link to="/" aria-label="Duely home" className="rounded-md">
           <Logo />

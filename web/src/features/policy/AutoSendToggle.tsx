@@ -11,7 +11,7 @@ export function AutoSendToggle({ checked, onChange, disabled = false }: AutoSend
   const labelId = useId();
   const descriptionId = useId();
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-line bg-paper p-4">
+    <div className="flex items-start justify-between gap-4 border-t border-line pt-4">
       <div>
         <p id={labelId} className="text-sm font-medium text-ink">
           Auto-send reminders
@@ -36,7 +36,7 @@ export function AutoSendToggle({ checked, onChange, disabled = false }: AutoSend
       >
         <span
           className={cx(
-            "absolute top-0.5 left-0.5 size-4.5 rounded-full bg-white shadow-sm transition-transform",
+            "absolute top-0.5 left-0.5 size-4.5 rounded-full bg-white transition-transform",
             checked ? "translate-x-5" : "translate-x-0",
           )}
         />

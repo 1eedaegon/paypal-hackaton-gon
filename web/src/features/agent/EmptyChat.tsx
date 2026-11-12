@@ -20,18 +20,18 @@ const EXAMPLES = [
 export function EmptyChat({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm leading-relaxed text-ink-soft">
+      <p className="text-sm leading-relaxed text-ink">
         Tell me about a job in plain words and I'll draft the invoice. I never send anything to a client until you
         approve it.
       </p>
-      <p className="text-xs font-medium tracking-wide text-muted uppercase">Try one of these</p>
-      <ul className="flex flex-col gap-2">
+      <p className="text-xs text-muted">Try one of these</p>
+      <ul className="border-t border-line">
         {EXAMPLES.map((example) => (
-          <li key={example.label}>
+          <li key={example.label} className="border-b border-line">
             <button
               type="button"
               onClick={() => onPick(example.text)}
-              className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-line-strong hover:bg-paper"
+              className="w-full rounded py-2.5 text-left hover:bg-paper-deep"
             >
               <span className="block text-sm font-medium text-ink">{example.label}</span>
               <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-muted">{example.text}</span>

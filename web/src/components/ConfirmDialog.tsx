@@ -30,7 +30,7 @@ export function ConfirmDialog({
   return (
     <Modal open={open} onClose={onCancel} labelledBy={titleId}>
       <div className="flex flex-col gap-3 p-6">
-        <h2 id={titleId} className="font-display text-xl font-medium">
+        <h2 id={titleId} className="text-lg font-medium">
           {title}
         </h2>
         <div className="text-sm leading-relaxed text-ink-soft">{children}</div>

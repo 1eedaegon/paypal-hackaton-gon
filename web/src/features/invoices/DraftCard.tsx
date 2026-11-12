@@ -1,4 +1,3 @@
-import { Send } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/Button";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -8,7 +7,6 @@ import type { Invoice } from "../../lib/types";
 import type { DraftForm } from "../../lib/validation";
 import { draftTotalCents } from "./draftForm";
 import { DraftItemsEditor } from "./DraftItemsEditor";
-import { StatusPill } from "./StatusPill";
 import { useDraftEditor } from "./useDraftEditor";
 
 /** Editable draft invoice. Nothing reaches the client until "Approve & send" is pressed. */
@@ -27,13 +25,10 @@ export function DraftCard({ invoice }: { invoice: Invoice }) {
   };
 
   return (
-    <article className="@container rounded-2xl border border-line-strong bg-surface" aria-label="Draft invoice">
-      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <div className="flex items-center gap-2">
-          <StatusPill invoice={invoice} />
-          <span className="text-xs text-muted">Not sent yet. Edit anything, then approve.</span>
-        </div>
-      </header>
+    <article className="@container rounded-lg border border-line bg-surface" aria-label="Draft invoice">
+      <p className="border-b border-line px-4 py-2.5 text-sm text-muted">
+        Draft, not sent yet. Edit anything, then approve.
+      </p>
       <div className="flex flex-col gap-4 p-4">
         <div className="grid gap-3 @lg:grid-cols-2">
           <TextField
@@ -79,7 +74,7 @@ export function DraftCard({ invoice }: { invoice: Invoice }) {
       <footer className="flex flex-col gap-3 border-t border-line px-4 py-3 @lg:flex-row @lg:items-center @lg:justify-between">
         <p className="flex items-baseline gap-2">
           <span className="text-sm text-muted">Total</span>
-          <span className="money font-display text-2xl font-medium">{formatCents(draftTotalCents(form))}</span>
+          <span className="money text-xl font-medium">{formatCents(draftTotalCents(form))}</span>
           <span className="text-xs text-muted">USD</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -94,7 +89,6 @@ export function DraftCard({ invoice }: { invoice: Invoice }) {
           <Button
             variant="primary"
             size="sm"
-            icon={<Send className="size-4" aria-hidden="true" />}
             onClick={editor.send}
             pending={editor.sending}
             pendingLabel="Sending through PayPal…"

@@ -1,4 +1,3 @@
-import { Inbox } from "lucide-react";
 import { useCallback } from "react";
 import { PanelMessage } from "../../components/PanelMessage";
 import { api } from "../../lib/api";
@@ -25,7 +24,7 @@ export function ApprovalsTab() {
     <div className="flex flex-col gap-8">
       <section aria-labelledby="pending-heading" className="flex flex-col gap-3">
         <div>
-          <h2 id="pending-heading" className="font-display text-xl font-medium">
+          <h2 id="pending-heading" className="text-base font-medium">
             Waiting for your approval
           </h2>
           <p className="text-sm text-ink-soft">
@@ -35,7 +34,7 @@ export function ApprovalsTab() {
           </p>
         </div>
         {pending.length === 0 ? (
-          <PanelMessage icon={<Inbox className="size-5" aria-hidden="true" />} title="You're all caught up">
+          <PanelMessage title="You're all caught up">
             Run a collection review from the agent panel and any reminders it proposes will land here.
           </PanelMessage>
         ) : (
@@ -43,7 +42,7 @@ export function ApprovalsTab() {
         )}
       </section>
       <section aria-labelledby="handled-heading" className="flex flex-col gap-3">
-        <h2 id="handled-heading" className="font-display text-xl font-medium">
+        <h2 id="handled-heading" className="text-base font-medium">
           Recently handled
         </h2>
         {history.data === null && history.error ? (

@@ -1,4 +1,3 @@
-import { HandCoins, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/Button";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -47,7 +46,6 @@ export function InvoiceActions({ invoice, onChanged }: InvoiceActionsProps) {
       {invoice.status === "sent" ? (
         <Button
           size="sm"
-          icon={<HandCoins className="size-4" aria-hidden="true" />}
           onClick={() => setConfirming(true)}
           disabled={busy}
         >
@@ -56,7 +54,6 @@ export function InvoiceActions({ invoice, onChanged }: InvoiceActionsProps) {
       ) : null}
       <Button
         size="sm"
-        icon={<RefreshCw className="size-4" aria-hidden="true" />}
         onClick={sync}
         pending={syncing.pending}
         pendingLabel="Checking PayPal…"

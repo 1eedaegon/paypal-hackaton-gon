@@ -19,10 +19,10 @@ export function ReceivablesTab() {
       {drafts.length > 0 ? (
         <section aria-labelledby="drafts-heading" className="flex flex-col gap-3">
           <div>
-            <h2 id="drafts-heading" className="font-display text-xl font-medium">
+            <h2 id="drafts-heading" className="text-base font-medium">
               Waiting for your approval
             </h2>
-            <p className="text-sm text-ink-soft">
+            <p className="text-sm text-muted">
               {pluralize(drafts.length, "draft")} from the agent. Nothing is sent until you approve it.
             </p>
           </div>
@@ -32,13 +32,13 @@ export function ReceivablesTab() {
         </section>
       ) : null}
       <section aria-labelledby="invoices-heading" className="flex flex-col gap-3">
-        <h2 id="invoices-heading" className="font-display text-xl font-medium">
+        <h2 id="invoices-heading" className="text-base font-medium">
           Invoices
         </h2>
         {issued.length > 0 ? (
           <InvoiceTable invoices={issued} onOpen={openInvoice} />
         ) : (
-          <p className="rounded-2xl border border-dashed border-line-strong px-4 py-6 text-center text-sm text-ink-soft">
+          <p className="text-sm text-muted">
             No invoices sent yet. Approve a draft above and it will appear here.
           </p>
         )}

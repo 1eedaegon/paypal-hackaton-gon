@@ -1,39 +1,32 @@
-import { ArrowRight, CircleCheck, ScrollText } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { Button } from "../../components/Button";
+import { useToast } from "../../components/Toast";
 import { api } from "../../lib/api";
-import { formatMoney } from "../../lib/format";
+import { formatDate, formatMoney } from "../../lib/format";
 import type { Effect, Invoice } from "../../lib/types";
-import { needsApproval } from "../approvals/actionLogic";
-import { DraftCard } from "../invoices/DraftCard";
-import { invoiceLabel } from "../invoices/invoiceLogic";
-import { StatusPill } from "../invoices/StatusPill";
+import { useAsyncAction } from "../../lib/useAsyncAction";
+import { invoiceLabel, invoiceStatus } from "../invoices/invoiceLogic";
 import { useWorkspace } from "../workspace/WorkspaceContext";
 import type { WorkspaceTab } from "../workspace/WorkspaceContext";
 
-interface ChipProps {
-  icon: ReactNode;
-  label: string;
+const LINK_CLASS = "rounded text-accent underline underline-offset-2 hover:text-accent-strong";
+
+interface EffectLineProps {
+  children: ReactNode;
   linkLabel: string;
   onOpen: () => void;
 }
 
-function EffectChip({ icon, label, linkLabel, onOpen }: ChipProps) {
+/** One plain line: what happened, then where to look. */
+function EffectLine({ children, linkLabel, onOpen }: EffectLineProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
-      <span className="inline-flex items-center gap-2 font-medium text-ink">
-        {icon}
-        {label}
-      </span>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="inline-flex items-center gap-1 rounded text-xs font-medium text-accent hover:text-accent-strong"
-      >
+    <p className="text-sm text-muted">
+      {children} <span aria-hidden="true">—</span>{" "}
+      <button type="button" onClick={onOpen} className={LINK_CLASS}>
         {linkLabel}
-        <ArrowRight className="size-3" aria-hidden="true" />
       </button>
-    </div>
+    </p>
   );
 }
 
@@ -63,37 +56,58 @@ function useEffectInvoice(invoiceId: string): Lookup {
   return onBoard ?? fetched;
 }
 
+/** Compact draft summary. The full editor lives only in Receivables. */
+function DraftSummary({ invoice }: { invoice: Invoice }) {
+  const { refresh, setTab } = useWorkspace();
+  const toast = useToast();
+  const sending = useAsyncAction();
+
+  const send = async () => {
+    const ok = await sending.run(async () => {
+      await api.sendInvoice(invoice.id);
+    });
+    if (ok) {
+      toast.success(`Invoice sent to ${invoice.recipient_name} through PayPal.`);
+    }
+    await refresh();
+  };
+
+  return (
+    <div className="border-y border-line py-3">
+      <p className="text-xs text-muted">Draft invoice, not sent yet</p>
+      <p className="mt-1 text-sm font-medium text-ink">{invoice.recipient_name}</p>
+      <p className="money text-sm text-muted">
+        {formatMoney(invoice.total)} · due {formatDate(invoice.due_date)}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button variant="primary" size="sm" onClick={send} pending={sending.pending} pendingLabel="Sending…">
+          Approve &amp; send
+        </Button>
+        <Button size="sm" onClick={() => setTab("receivables")} disabled={sending.pending}>
+          Edit in Receivables
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function DraftEffect({ invoiceId }: { invoiceId: string }) {
   const { openInvoice } = useWorkspace();
   const invoice = useEffectInvoice(invoiceId);
   if (invoice === "loading") {
-    return <p className="text-xs text-muted">Loading the draft…</p>;
+    return <p className="text-sm text-muted">Loading the draft…</p>;
   }
   if (invoice === "missing") {
-    return <p className="text-xs text-muted">This draft was discarded.</p>;
+    return <p className="text-sm text-muted">This draft was discarded.</p>;
   }
   if (invoice.status === "draft") {
-    return <DraftCard invoice={invoice} />;
+    return <DraftSummary invoice={invoice} />;
   }
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
-      <span className="min-w-0">
-        <span className="block truncate font-medium text-ink">{invoice.recipient_name}</span>
-        <span className="money text-xs text-muted">
-          {invoiceLabel(invoice)} · {formatMoney(invoice.total)}
-        </span>
-      </span>
-      <span className="flex items-center gap-2">
-        <StatusPill invoice={invoice} />
-        <button
-          type="button"
-          onClick={() => openInvoice(invoice.id)}
-          className="rounded text-xs font-medium text-accent hover:text-accent-strong"
-        >
-          View
-        </button>
-      </span>
-    </div>
+    <EffectLine linkLabel="View invoice" onOpen={() => openInvoice(invoice.id)}>
+      {invoiceLabel(invoice)} to {invoice.recipient_name}, {formatMoney(invoice.total)}:{" "}
+      {invoiceStatus(invoice).label.toLowerCase()}
+    </EffectLine>
   );
 }
 
@@ -102,38 +116,17 @@ function ProposedEffect({ actionId }: { actionId: string }) {
   const action = dashboard.pending_actions.find((candidate) => candidate.id === actionId);
   const openApprovals = () => setTab("approvals");
   if (!action) {
+    // No longer pending: already approved or rejected, or it was a decision to wait.
     return (
-      <EffectChip
-        icon={<CircleCheck className="size-4 text-muted" aria-hidden="true" />}
-        label="Follow-up handled"
-        linkLabel="Approvals"
-        onOpen={openApprovals}
-      />
-    );
-  }
-  if (!needsApproval(action)) {
-    return (
-      <EffectChip
-        icon={<CircleCheck className="size-4 text-muted" aria-hidden="true" />}
-        label={`Waiting on ${action.invoice.recipient_name} for now`}
-        linkLabel="See why"
-        onOpen={openApprovals}
-      />
+      <EffectLine linkLabel="See Approvals" onOpen={openApprovals}>
+        Follow-up recorded
+      </EffectLine>
     );
   }
   return (
-    <div className="rounded-xl border border-amber-line bg-amber-soft/60 px-3 py-2 text-sm">
-      <p className="font-medium text-ink">Reminder drafted for {action.invoice.recipient_name}</p>
-      <p className="mt-0.5 truncate text-xs text-ink-soft">{action.subject}</p>
-      <button
-        type="button"
-        onClick={openApprovals}
-        className="mt-2 inline-flex items-center gap-1 rounded text-xs font-medium text-accent-strong underline underline-offset-2"
-      >
-        Review in Approvals
-        <ArrowRight className="size-3" aria-hidden="true" />
-      </button>
-    </div>
+    <EffectLine linkLabel="Review in Approvals" onOpen={openApprovals}>
+      Reminder drafted for {action.invoice.recipient_name}
+    </EffectLine>
   );
 }
 
@@ -154,32 +147,26 @@ function EffectCard({ effect }: { effect: Effect }) {
       return <ProposedEffect actionId={effect.action_id} />;
     case "action_executed":
       return (
-        <EffectChip
-          icon={<CircleCheck className="size-4 text-accent" aria-hidden="true" />}
-          label="Reminder sent"
-          linkLabel="Approvals"
-          onOpen={open("approvals")}
-        />
+        <EffectLine linkLabel="See Approvals" onOpen={open("approvals")}>
+          Reminder sent
+        </EffectLine>
       );
     case "policy_updated":
       return (
-        <EffectChip
-          icon={<ScrollText className="size-4 text-accent" aria-hidden="true" />}
-          label="Policy updated"
-          linkLabel="Policy"
-          onOpen={open("policy")}
-        />
+        <EffectLine linkLabel="Open Policy" onOpen={open("policy")}>
+          Policy updated
+        </EffectLine>
       );
   }
 }
 
-/** What the agent actually did in one turn, rendered under its reply. */
+/** What the agent actually did in one turn, as plain lines under its reply. */
 export function EffectCards({ effects }: { effects: readonly Effect[] }) {
   if (effects.length === 0) {
     return null;
   }
   return (
-    <div className="mt-2 flex flex-col gap-2">
+    <div className="mt-2 flex flex-col gap-1.5">
       {effects.map((effect, index) => (
         <EffectCard key={effectKey(effect, index)} effect={effect} />
       ))}

@@ -1,14 +1,12 @@
-import { Send } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/Button";
 import { TextAreaField, TextField } from "../../components/Field";
-import { Pill } from "../../components/Pill";
 import { useToast } from "../../components/Toast";
 import { api } from "../../lib/api";
 import type { Action } from "../../lib/types";
 import { useAsyncAction } from "../../lib/useAsyncAction";
 import { useWorkspace } from "../workspace/WorkspaceContext";
-import { actionDisplay, validateReminder } from "./actionLogic";
+import { validateReminder } from "./actionLogic";
 import { ActionSummary, Reasoning } from "./ActionSummary";
 
 interface ActionCardProps {
@@ -30,7 +28,6 @@ export function ActionCard({ action, onHandled }: ActionCardProps) {
 
   const dirty = subject !== saved.subject || message !== saved.message;
   const busy = saving.pending || approving.pending || rejecting.pending;
-  const display = actionDisplay(action);
 
   const validate = (): boolean => {
     const problem = validateReminder(subject, message);
@@ -79,11 +76,8 @@ export function ActionCard({ action, onHandled }: ActionCardProps) {
   };
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-line-strong bg-surface p-4">
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <ActionSummary action={action} onOpenInvoice={openInvoice} />
-        <Pill tone={display.tone}>{display.label}</Pill>
-      </header>
+    <article className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-4">
+      <ActionSummary action={action} onOpenInvoice={openInvoice} />
       <Reasoning text={action.reasoning} />
       <TextField label="Subject" value={subject} onValueChange={setSubject} disabled={busy} />
       <TextAreaField
@@ -106,7 +100,6 @@ export function ActionCard({ action, onHandled }: ActionCardProps) {
         <Button
           variant="primary"
           size="sm"
-          icon={<Send className="size-4" aria-hidden="true" />}
           onClick={approve}
           pending={approving.pending}
           pendingLabel="Sending…"

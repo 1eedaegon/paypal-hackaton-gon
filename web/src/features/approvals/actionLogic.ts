@@ -1,26 +1,26 @@
-import type { PillTone } from "../../components/Pill";
+import type { StatusTone } from "../../components/StatusText";
 import type { Action } from "../../lib/types";
 
 export interface ActionDisplay {
   label: string;
-  tone: PillTone;
+  tone: StatusTone;
 }
 
 export function actionDisplay(action: Pick<Action, "kind" | "status">): ActionDisplay {
   if (action.kind === "wait") {
-    return { label: "Decided to wait", tone: "neutral" };
+    return { label: "Decided to wait", tone: "muted" };
   }
   switch (action.status) {
     case "pending":
-      return { label: "Needs approval", tone: "amber" };
+      return { label: "Needs approval", tone: "muted" };
     case "executed":
-      return { label: "Reminder sent", tone: "green" };
+      return { label: "Reminder sent", tone: "muted" };
     case "rejected":
-      return { label: "Rejected", tone: "outline" };
+      return { label: "Rejected", tone: "muted" };
     case "failed":
       return { label: "Failed to send", tone: "red" };
     case "superseded":
-      return { label: "Replaced by a newer proposal", tone: "neutral" };
+      return { label: "Replaced by a newer proposal", tone: "muted" };
   }
 }
 

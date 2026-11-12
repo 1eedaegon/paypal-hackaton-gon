@@ -11,17 +11,17 @@ export function ItemsTable({ invoice }: { invoice: Invoice }) {
     <table className="w-full text-sm">
       <caption className="sr-only">Line items</caption>
       <thead>
-        <tr className="border-b border-line text-left text-xs tracking-wide text-muted uppercase">
-          <th scope="col" className="py-2 font-medium">
+        <tr className="border-b border-line text-left text-xs text-muted">
+          <th scope="col" className="py-2 font-normal">
             Item
           </th>
-          <th scope="col" className="py-2 text-right font-medium">
+          <th scope="col" className="py-2 text-right font-normal">
             Qty
           </th>
-          <th scope="col" className="py-2 text-right font-medium">
+          <th scope="col" className="py-2 text-right font-normal">
             Price
           </th>
-          <th scope="col" className="py-2 text-right font-medium">
+          <th scope="col" className="py-2 text-right font-normal">
             Amount
           </th>
         </tr>
@@ -41,7 +41,7 @@ export function ItemsTable({ invoice }: { invoice: Invoice }) {
           <th scope="row" colSpan={3} className="pt-3 text-right text-sm font-medium text-muted">
             Total (USD)
           </th>
-          <td className="money pt-3 pl-2 text-right font-display text-xl font-medium">
+          <td className="money pt-3 pl-2 text-right text-lg font-medium">
             {formatMoney(invoice.total)}
           </td>
         </tr>
@@ -53,7 +53,7 @@ export function ItemsTable({ invoice }: { invoice: Invoice }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs tracking-wide text-muted uppercase">{label}</dt>
+      <dt className="text-xs text-muted">{label}</dt>
       <dd className="mt-0.5 text-sm text-ink">{value}</dd>
     </div>
   );

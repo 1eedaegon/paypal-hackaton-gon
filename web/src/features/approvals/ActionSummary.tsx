@@ -9,7 +9,7 @@ export function ActionSummary({ action, onOpenInvoice }: { action: Action; onOpe
   return (
     <div className="min-w-0">
       <p className="truncate text-sm font-medium text-ink">{invoice.recipient_name}</p>
-      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-muted">
         {onOpenInvoice ? (
           <button
             type="button"
@@ -24,7 +24,7 @@ export function ActionSummary({ action, onOpenInvoice }: { action: Action; onOpe
         <span aria-hidden="true">·</span>
         <span className="money">{formatMoney(invoice.total)}</span>
         <span aria-hidden="true">·</span>
-        <span className={invoice.days_overdue > 0 ? "font-medium text-amber" : undefined}>{lateness}</span>
+        <span className={invoice.days_overdue > 0 ? "text-amber" : undefined}>{lateness}</span>
       </p>
     </div>
   );
@@ -35,9 +35,9 @@ export function Reasoning({ text }: { text: string }) {
     return null;
   }
   return (
-    <div className="rounded-lg border-l-2 border-accent bg-accent-soft/50 px-3 py-2">
-      <p className="text-xs font-medium tracking-wide text-accent-strong uppercase">Why the agent suggests this</p>
-      <p className="mt-1 text-sm leading-relaxed text-ink-soft">{text}</p>
+    <div>
+      <p className="text-xs text-muted">Agent's reasoning</p>
+      <p className="mt-1 text-sm leading-relaxed text-ink">{text}</p>
     </div>
   );
 }

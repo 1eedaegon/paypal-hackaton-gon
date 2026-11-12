@@ -1,4 +1,4 @@
-import { CircleCheck, TriangleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { cx } from "../lib/cx";
@@ -31,17 +31,12 @@ export function useToast(): ToastApi {
 
 function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: number) => void }) {
   const isError = toast.tone === "error";
-  const Icon = isError ? TriangleAlert : CircleCheck;
   return (
     <div
       role={isError ? "alert" : "status"}
-      className={cx(
-        "animate-rise pointer-events-auto flex items-start gap-3 rounded-xl border bg-surface p-3 pr-2 text-sm shadow-lg shadow-ink/5",
-        isError ? "border-danger/40" : "border-line-strong",
-      )}
+      className="animate-rise pointer-events-auto flex items-start gap-3 rounded-lg border border-line-strong bg-surface p-3 pr-2 text-sm"
     >
-      <Icon className={cx("mt-0.5 size-4 shrink-0", isError ? "text-danger" : "text-accent")} aria-hidden="true" />
-      <p className="flex-1 leading-snug text-ink">{toast.message}</p>
+      <p className={cx("flex-1 leading-snug", isError ? "text-danger" : "text-ink")}>{toast.message}</p>
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}

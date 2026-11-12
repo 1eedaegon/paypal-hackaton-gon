@@ -6,7 +6,7 @@ import { invoiceStatus, sortInvoices, splitDrafts } from "./invoiceLogic";
 describe("invoiceStatus", () => {
   test("labels an overdue invoice with the number of days", () => {
     const status = invoiceStatus(makeInvoice({ is_overdue: true, days_overdue: 9 }));
-    expect(status.label).toBe("Overdue 9d");
+    expect(status.label).toBe("Overdue 9 days");
     expect(status.kind).toBe("overdue");
   });
 

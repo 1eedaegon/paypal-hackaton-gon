@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "../../components/Button";
 import { INPUT_CLASS } from "../../components/Field";
 import { cx } from "../../lib/cx";
@@ -65,7 +65,7 @@ export function DraftItemsEditor({ items, onChange, error, disabled }: DraftItem
               type="button"
               onClick={() => removeItem(item.key)}
               aria-label={`Remove item ${index + 1}`}
-              className="rounded-md p-2 text-muted hover:bg-paper-deep hover:text-danger disabled:opacity-50"
+              className="rounded-md p-2 text-muted hover:text-ink disabled:opacity-50"
             >
               <Trash2 className="size-4" aria-hidden="true" />
             </button>
@@ -81,7 +81,7 @@ export function DraftItemsEditor({ items, onChange, error, disabled }: DraftItem
         <Button
           variant="ghost"
           size="sm"
-          icon={<Plus className="size-4" aria-hidden="true" />}
+          className="px-0"
           onClick={() => onChange([...items, emptyItem()])}
         >
           Add line item

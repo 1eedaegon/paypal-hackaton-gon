@@ -1,4 +1,4 @@
-import { Pill } from "../../components/Pill";
+import { StatusText } from "../../components/StatusText";
 import { formatRelativeTime } from "../../lib/format";
 import type { Action } from "../../lib/types";
 import { actionDisplay } from "./actionLogic";
@@ -8,28 +8,25 @@ function HandledItem({ action, onOpenInvoice }: { action: Action; onOpenInvoice?
   const display = actionDisplay(action);
   const when = action.executed_at ?? action.created_at;
   return (
-    <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <li className="flex flex-col gap-1.5 border-b border-line py-3 last:border-b-0">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
         <ActionSummary action={action} onOpenInvoice={onOpenInvoice} />
-        <div className="flex items-center gap-2">
-          <time dateTime={when} className="text-xs text-muted">
-            {formatRelativeTime(when)}
-          </time>
-          <Pill tone={display.tone}>{display.label}</Pill>
-        </div>
+        <p className="text-sm text-muted">
+          <StatusText tone={display.tone}>{display.label}</StatusText>
+          <span aria-hidden="true"> · </span>
+          <time dateTime={when}>{formatRelativeTime(when)}</time>
+        </p>
       </div>
-      {action.reasoning ? <p className="text-sm leading-relaxed text-ink-soft">{action.reasoning}</p> : null}
+      {action.reasoning ? <p className="text-sm leading-relaxed text-muted">{action.reasoning}</p> : null}
       {action.kind === "remind" && action.subject ? (
         <details className="text-sm">
-          <summary className="rounded text-xs font-medium text-accent">Show the message</summary>
-          <div className="mt-2 rounded-lg bg-paper px-3 py-2">
-            <p className="font-medium text-ink">{action.subject}</p>
-            <p className="mt-1 leading-relaxed whitespace-pre-wrap text-ink-soft">{action.message}</p>
-          </div>
+          <summary className="rounded text-sm text-accent">Show the message</summary>
+          <p className="mt-2 font-medium text-ink">{action.subject}</p>
+          <p className="mt-1 leading-relaxed whitespace-pre-wrap text-muted">{action.message}</p>
         </details>
       ) : null}
       {action.error ? (
-        <p role="alert" className="text-xs font-medium text-danger">
+        <p role="alert" className="text-sm text-danger">
           {action.error}
         </p>
       ) : null}
@@ -46,7 +43,7 @@ export function HandledList({
   onOpenInvoice?: (id: string) => void;
 }) {
   return (
-    <ul className="rounded-2xl border border-line bg-surface px-4 py-1">
+    <ul className="border-t border-line">
       {actions.map((action) => (
         <HandledItem key={action.id} action={action} onOpenInvoice={onOpenInvoice} />
       ))}

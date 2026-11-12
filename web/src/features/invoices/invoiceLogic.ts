@@ -1,26 +1,27 @@
-import type { PillTone } from "../../components/Pill";
+import type { StatusTone } from "../../components/StatusText";
+import { pluralize } from "../../lib/format";
 import type { Invoice } from "../../lib/types";
 
 export interface StatusDisplay {
   label: string;
-  tone: PillTone;
+  tone: StatusTone;
   kind: "draft" | "sent" | "overdue" | "paid" | "cancelled";
 }
 
 export function invoiceStatus(invoice: Pick<Invoice, "status" | "is_overdue" | "days_overdue">): StatusDisplay {
   if (invoice.status === "draft") {
-    return { label: "Draft", tone: "outline", kind: "draft" };
+    return { label: "Draft", tone: "muted", kind: "draft" };
   }
   if (invoice.status === "paid") {
     return { label: "Paid", tone: "green", kind: "paid" };
   }
   if (invoice.status === "cancelled") {
-    return { label: "Cancelled", tone: "neutral", kind: "cancelled" };
+    return { label: "Cancelled", tone: "muted", kind: "cancelled" };
   }
   if (invoice.is_overdue) {
-    return { label: `Overdue ${invoice.days_overdue}d`, tone: "amber", kind: "overdue" };
+    return { label: `Overdue ${pluralize(invoice.days_overdue, "day")}`, tone: "amber", kind: "overdue" };
   }
-  return { label: "Sent", tone: "neutral", kind: "sent" };
+  return { label: "Sent", tone: "muted", kind: "sent" };
 }
 
 const GROUP_ORDER: Record<StatusDisplay["kind"], number> = {

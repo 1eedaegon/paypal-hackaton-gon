@@ -73,9 +73,9 @@ export function PolicyTab({ reloadKey }: PolicyTabProps) {
   };
 
   return (
-    <section aria-labelledby="policy-heading" className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="policy-heading" className="flex max-w-2xl flex-col gap-5">
       <div>
-        <h2 id="policy-heading" className="font-display text-xl font-medium">
+        <h2 id="policy-heading" className="text-base font-medium">
           Collection policy
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-ink-soft">

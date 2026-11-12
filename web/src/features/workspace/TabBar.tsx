@@ -58,21 +58,15 @@ export function TabBar({ active, onSelect, pendingApprovals }: TabBarProps) {
             role="tab"
             aria-selected={selected}
             aria-controls={TAB_PANEL_ID}
-            aria-label={showCount ? `${tab.label}, ${pendingApprovals} waiting for approval` : undefined}
             tabIndex={selected ? 0 : -1}
             onClick={() => onSelect(tab.id)}
             className={cx(
-              "-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-2 py-2.5 text-[0.8125rem] font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm",
+              "-mb-px inline-flex shrink-0 items-center border-b-2 px-2 py-2.5 text-[0.8125rem] font-medium transition-colors sm:px-3 sm:text-sm",
               tab.mobileOnly && "lg:hidden",
-              selected ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink",
+              selected ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink",
             )}
           >
-            {tab.label}
-            {showCount ? (
-              <span className="money rounded-full bg-amber-soft px-1.5 py-0.5 text-xs font-semibold text-amber">
-                {pendingApprovals}
-              </span>
-            ) : null}
+            {showCount ? `${tab.label} (${pendingApprovals})` : tab.label}
           </button>
         );
       })}

@@ -1,4 +1,3 @@
-import { Sparkles, WifiOff } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "../../components/Button";
 import { FullPageStatus } from "../../components/FullPageStatus";
@@ -26,9 +25,8 @@ const DASHBOARD_POLL_MS = 4000;
 function LoadFailure({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
     <div role="alert" className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
-      <WifiOff className="size-6 text-danger" aria-hidden="true" />
-      <h1 className="font-display text-2xl font-medium">Your workspace didn't load</h1>
-      <p className="max-w-sm text-sm text-ink-soft">{describeError(error)}</p>
+      <h1 className="text-xl font-medium">Your workspace didn't load</h1>
+      <p className="max-w-sm text-sm text-danger">{describeError(error)}</p>
       <Button variant="primary" onClick={onRetry}>
         Try again
       </Button>
@@ -79,7 +77,7 @@ function WorkspaceShell({ user }: { user: User }) {
       <main className="mx-auto flex max-w-7xl flex-col gap-5 px-4 pt-5 pb-20 sm:px-6 lg:pb-8">
         <h1 className="sr-only">Duely workspace</h1>
         {error ? (
-          <p role="status" className="rounded-xl border border-amber-line bg-amber-soft px-3 py-2 text-sm text-amber">
+          <p role="status" className="text-sm text-danger">
             Live updates are paused: {describeError(error)} Showing the last data we received.
           </p>
         ) : null}
@@ -111,8 +109,7 @@ function WorkspaceShell({ user }: { user: User }) {
       {agentTabActive ? null : (
         <Button
           variant="primary"
-          className="fixed right-4 bottom-4 z-10 rounded-full shadow-lg shadow-ink/20 lg:hidden"
-          icon={<Sparkles className="size-4" aria-hidden="true" />}
+          className="fixed right-4 bottom-4 z-10 lg:hidden"
           onClick={() => setTab("agent")}
         >
           Ask the agent

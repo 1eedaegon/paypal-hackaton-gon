@@ -1,4 +1,3 @@
-import { ScrollText } from "lucide-react";
 import { useCallback } from "react";
 import { PanelMessage } from "../../components/PanelMessage";
 import { api } from "../../lib/api";
@@ -23,14 +22,14 @@ export function ActivityTab() {
   }
   if (data.length === 0) {
     return (
-      <PanelMessage icon={<ScrollText className="size-5" aria-hidden="true" />} title="Nothing has happened yet">
+      <PanelMessage title="Nothing has happened yet">
         Every draft, approval, reminder and payment will be recorded here, with who did it: the agent, you, or
         PayPal.
       </PanelMessage>
     );
   }
   return (
-    <section aria-label="Activity log" className="rounded-2xl border border-line bg-surface px-4 py-1">
+    <section aria-label="Activity log" className="border-t border-line">
       <ActivityList activity={data} onOpenInvoice={openInvoice} />
     </section>
   );
