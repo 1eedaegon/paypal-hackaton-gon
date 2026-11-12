@@ -10,7 +10,7 @@ export function BuiltOn() {
     <section aria-label="Technology and demo environment" className="border-t border-line py-10">
       <div className={`${SECTION} flex max-w-6xl flex-col gap-2 text-sm leading-relaxed text-muted`}>
         <p>
-          <span className="text-ink">Built on PayPal Invoicing, PayPal Webhooks, Google Gemini.</span>
+          <span className="text-ink">Built on PayPal Invoicing and PayPal Webhooks.</span>
         </p>
         <p className="max-w-2xl">
           This demo runs on the PayPal sandbox. Invoices, reminders and payments are real API calls, but no real
