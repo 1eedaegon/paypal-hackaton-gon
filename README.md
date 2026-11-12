@@ -8,6 +8,8 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 - **Demo video (2:36):** https://youtu.be/I7CNx8gMa9g
 - **Test account:** see [Try it](#try-it)
 
+![The approvals inbox: one decision per unpaid invoice, each with the agent's reasoning](docs/duely-3-approvals.png)
+
 ## The problem
 
 Freelancers get paid late for a boring reason: sending the invoice and chasing the client are awkward chores that get postponed. With five to ten clients, who is nine days late and who was already nudged lives in your head.
