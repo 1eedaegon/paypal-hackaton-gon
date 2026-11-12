@@ -7,7 +7,7 @@ const DEFAULT_AGENT_DAILY_LIMIT: i32 = 40;
 const DEFAULT_GLOBAL_AGENT_DAILY_LIMIT: i64 = 1200;
 const DEFAULT_INVOICE_DAILY_LIMIT: i32 = 25;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     pub database_url: String,
     pub paypal_client_id: String,

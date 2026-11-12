@@ -11,7 +11,7 @@ use crate::error::{ok, AppResult};
 use crate::models::ActionDto;
 use crate::repo::actions;
 use crate::repo::activity::ACTOR_USER;
-use crate::service::{self, today};
+use crate::service::{self, detached, throttle_paypal, today};
 use crate::state::AppState;
 
 const LIST_LIMIT: i64 = 100;
@@ -73,7 +73,10 @@ async fn approve(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    service::actions::execute(&state, user.id, id, ACTOR_USER).await?;
+    throttle_paypal(&state, user.id)?;
+    let task_state = state.clone();
+    let user_id = user.id;
+    detached(async move { service::actions::execute(&task_state, user_id, id, ACTOR_USER).await }).await?;
     action_response(&state, user.id, id).await
 }
 

@@ -12,6 +12,8 @@ use crate::repo::activity::{ACTOR_PAYPAL, ACTOR_USER};
 use crate::repo::{actions, activity, invoices, usage};
 use crate::state::AppState;
 
+const MAX_INDIVIDUAL_READS_PER_RUN: usize = 20;
+
 /// Creates the invoice in PayPal and sends it. A failed send leaves no PayPal draft behind.
 pub async fn deliver(
     state: &AppState,
@@ -31,13 +33,30 @@ pub async fn deliver(
             note: &invoice.note,
         })
         .await?;
-    if let Err(send_error) = state.paypal.send_invoice(&remote.id).await {
-        if let Err(cleanup_error) = state.paypal.delete_invoice(&remote.id).await {
-            tracing::warn!(error = %cleanup_error, paypal_invoice_id = %remote.id, "could not delete unsent PayPal draft");
-        }
-        return Err(send_error);
+    match state.paypal.send_invoice(&remote.id).await {
+        Ok(()) => Ok(remote),
+        Err(send_error) => recover_failed_send(state, remote, send_error).await,
     }
-    Ok(remote)
+}
+
+/// A send call can fail on our side after PayPal accepted it. Ask PayPal what happened before
+/// undoing anything, so a retry never sends the client a duplicate invoice.
+async fn recover_failed_send(
+    state: &AppState,
+    remote: RemoteInvoice,
+    send_error: AppError,
+) -> AppResult<RemoteInvoice> {
+    let current = match state.paypal.get_invoice(&remote.id).await {
+        Ok(current) => current,
+        Err(_) => return Err(send_error),
+    };
+    if local_status(&current.status).is_some() {
+        return Ok(current);
+    }
+    if let Err(cleanup_error) = state.paypal.delete_invoice(&remote.id).await {
+        tracing::warn!(error = %cleanup_error, paypal_invoice_id = %remote.id, "could not delete unsent PayPal draft");
+    }
+    Err(send_error)
 }
 
 /// Approves a draft: it is created and sent through PayPal exactly once.
@@ -183,8 +202,11 @@ pub async fn sync_by_paypal_id(state: &AppState, paypal_invoice_id: &str) -> App
     apply_remote_status(&state.db, &invoice, &remote.status).await
 }
 
-/// Safety net for missed webhooks: compares every unpaid invoice with PayPal's list.
+/// Safety net for missed webhooks: compares every unpaid invoice with PayPal. Invoices too old to
+/// be in PayPal's first list page are read one by one, a few per run.
 pub async fn reconcile_all(state: &AppState) -> AppResult<()> {
+    invoices::release_stale_claims(&state.db).await?;
+    actions::release_stale_claims(&state.db).await?;
     let unpaid = invoices::list_all_unpaid(&state.db).await?;
     if unpaid.is_empty() {
         return Ok(());
@@ -195,13 +217,17 @@ pub async fn reconcile_all(state: &AppState) -> AppResult<()> {
         .await?
         .into_iter()
         .collect();
+    let mut individual_reads = 0;
     for invoice in &unpaid {
-        let remote_status = invoice
-            .paypal_invoice_id
-            .as_ref()
-            .and_then(|id| statuses.get(id));
-        if let Some(status) = remote_status {
+        let Some(paypal_id) = invoice.paypal_invoice_id.as_deref() else {
+            continue;
+        };
+        if let Some(status) = statuses.get(paypal_id) {
             apply_remote_status(&state.db, invoice, status).await?;
+        } else if individual_reads < MAX_INDIVIDUAL_READS_PER_RUN {
+            individual_reads += 1;
+            let remote = state.paypal.get_invoice(paypal_id).await?;
+            apply_remote_status(&state.db, invoice, &remote.status).await?;
         }
     }
     Ok(())

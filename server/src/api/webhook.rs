@@ -3,8 +3,11 @@ use axum::http::{HeaderMap, StatusCode};
 use serde_json::Value;
 
 use crate::paypal::webhook::invoice_id_of;
+use crate::security::client_key;
 use crate::service;
 use crate::state::AppState;
+
+const MAX_EVENT_ID_LEN: usize = 128;
 
 /// Returns false when this event id was already processed (PayPal retries deliveries).
 async fn first_delivery(state: &AppState, event_id: &str) -> Result<bool, sqlx::Error> {
@@ -17,9 +20,9 @@ async fn first_delivery(state: &AppState, event_id: &str) -> Result<bool, sqlx::
 
 async fn is_authentic(state: &AppState, headers: &HeaderMap, body: &str) -> bool {
     let Some(webhook_id) = state.cfg.paypal_webhook_id.as_deref() else {
-        // No webhook id configured (local development). The event is still only a hint:
-        // the invoice is re-read from PayPal before anything changes.
-        return true;
+        // Without a webhook id nothing can be verified, so nothing is accepted. Payments are
+        // still picked up by the background reconciler.
+        return false;
     };
     match state.paypal.verify_webhook(headers, webhook_id, body).await {
         Ok(valid) => valid,
@@ -37,6 +40,9 @@ pub async fn receive(
     headers: HeaderMap,
     body: String,
 ) -> StatusCode {
+    if !state.limiters.webhook.allow(&client_key(&headers)) {
+        return StatusCode::TOO_MANY_REQUESTS;
+    }
     let Ok(event) = serde_json::from_str::<Value>(&body) else {
         return StatusCode::BAD_REQUEST;
     };
@@ -46,6 +52,9 @@ pub async fn receive(
     let (Some(event_id), Some(invoice_id)) = (event["id"].as_str(), invoice_id_of(&event)) else {
         return StatusCode::OK;
     };
+    if event_id.len() > MAX_EVENT_ID_LEN {
+        return StatusCode::BAD_REQUEST;
+    }
     match first_delivery(&state, event_id).await {
         Ok(true) => {}
         Ok(false) => return StatusCode::OK,

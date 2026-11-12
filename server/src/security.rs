@@ -13,6 +13,20 @@ const CONTENT_SECURITY_POLICY: &str = "default-src 'self'; script-src 'self'; \
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; \
 img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
+const MAX_CLIENT_KEY_LEN: usize = 64;
+
+/// The caller's address for rate limiting. The platform proxy sets `cf-connecting-ip` and appends
+/// the real peer as the last `x-forwarded-for` entry; earlier entries are client-controlled.
+pub fn client_key(headers: &HeaderMap) -> String {
+    let header = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
+    let address = header("cf-connecting-ip")
+        .or_else(|| header("x-forwarded-for").and_then(|list| list.rsplit(',').next()))
+        .map(str::trim)
+        .filter(|address| !address.is_empty())
+        .unwrap_or("local");
+    address.chars().take(MAX_CLIENT_KEY_LEN).collect()
+}
+
 /// True when the browser-sent Origin names the same host the request was addressed to.
 fn origin_matches_host(headers: &HeaderMap) -> bool {
     let Some(origin) = headers.get(ORIGIN).and_then(|v| v.to_str().ok()) else {
@@ -44,8 +58,15 @@ pub async fn same_origin(request: Request, next: Next) -> Response {
 }
 
 pub async fn headers(request: Request, next: Next) -> Response {
+    let is_api = request.uri().path().starts_with("/api/");
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
+    if is_api {
+        headers.insert(
+            HeaderName::from_static("cache-control"),
+            HeaderValue::from_static("no-store"),
+        );
+    }
     let fixed = [
         ("x-content-type-options", "nosniff"),
         ("x-frame-options", "DENY"),
@@ -85,6 +106,23 @@ mod tests {
             "localhost:8080"
         )));
         assert!(origin_matches_host(&headers_with(None, "duely.example")));
+    }
+
+    #[test]
+    fn client_key_ignores_spoofable_leading_forwarded_entries() {
+        let mut map = HeaderMap::new();
+        map.insert("x-forwarded-for", "6.6.6.6, 203.0.113.9".parse().unwrap());
+        assert_eq!(client_key(&map), "203.0.113.9");
+        map.insert("cf-connecting-ip", "198.51.100.4".parse().unwrap());
+        assert_eq!(client_key(&map), "198.51.100.4");
+    }
+
+    #[test]
+    fn client_key_falls_back_and_is_length_capped() {
+        assert_eq!(client_key(&HeaderMap::new()), "local");
+        let mut map = HeaderMap::new();
+        map.insert("cf-connecting-ip", "9".repeat(500).parse().unwrap());
+        assert_eq!(client_key(&map).len(), MAX_CLIENT_KEY_LEN);
     }
 
     #[test]

@@ -12,12 +12,14 @@ use super::password;
 use super::session::{self, AuthUser, SESSION_COOKIE};
 use crate::error::{ok, AppError, AppResult};
 use crate::models::User;
+use crate::security::client_key;
 use crate::state::AppState;
 use crate::validation::{normalize_email, required_text};
 
 const MIN_PASSWORD_LEN: usize = 8;
 const MAX_PASSWORD_LEN: usize = 200;
 const MAX_NAME_LEN: usize = 80;
+const MAX_SIGNUPS_PER_DAY: i64 = 400;
 const DEFAULT_POLICY: &str = "Send a polite reminder once an invoice is 3 days overdue. Once it is 10 days \
 overdue, send a firmer reminder. Clients who have paid me before get 3 extra days before the first reminder. \
 Never send a second reminder within 4 days of the previous one.";
@@ -30,22 +32,26 @@ pub fn router() -> Router<AppState> {
         .route("/me", get(me))
 }
 
-/// Best-effort client address for rate limiting (the app runs behind one trusted proxy).
-fn client_key(headers: &HeaderMap) -> String {
-    headers
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split(',').next())
-        .map(|ip| ip.trim().to_string())
-        .unwrap_or_else(|| "local".to_string())
-}
-
-fn check_rate(state: &AppState, headers: &HeaderMap) -> AppResult<()> {
-    if state.auth_limiter.allow(&client_key(headers)) {
+fn limited(allowed: bool) -> AppResult<()> {
+    if allowed {
         Ok(())
     } else {
         Err(AppError::RateLimited)
     }
+}
+
+/// A ceiling on new accounts per day across the whole demo, as a backstop behind per-address limits.
+async fn check_signup_capacity(state: &AppState) -> AppResult<()> {
+    let (today,): (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE")
+            .fetch_one(&state.db)
+            .await?;
+    if today >= MAX_SIGNUPS_PER_DAY {
+        return Err(AppError::Quota(
+            "The demo has reached today's limit for new accounts. Please use the shared test account from the README.".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_password(password: &str) -> AppResult<()> {
@@ -71,11 +77,12 @@ async fn signup(
     jar: CookieJar,
     Json(body): Json<SignupBody>,
 ) -> AppResult<impl IntoResponse> {
-    check_rate(&state, &headers)?;
+    limited(state.limiters.signup.allow(&client_key(&headers)))?;
     let email = normalize_email(&body.email)?;
     let name = required_text(&body.name, "Name", MAX_NAME_LEN)?;
     validate_password(&body.password)?;
-    let password_hash = password::hash(body.password).await?;
+    check_signup_capacity(&state).await?;
+    let password_hash = password::hash(&state.limiters.password_hashing, body.password).await?;
 
     let user = sqlx::query_as::<_, User>(
         "INSERT INTO users (id, email, name, password_hash) VALUES ($1, $2, $3, $4) \
@@ -116,7 +123,7 @@ async fn login(
     jar: CookieJar,
     Json(body): Json<LoginBody>,
 ) -> AppResult<impl IntoResponse> {
-    check_rate(&state, &headers)?;
+    limited(state.limiters.login.allow(&client_key(&headers)))?;
     let wrong = || AppError::invalid("Email or password is incorrect.");
     let email = normalize_email(&body.email).map_err(|_| wrong())?;
 
@@ -126,7 +133,7 @@ async fn login(
             .fetch_optional(&state.db)
             .await?;
     let (id, email, name, password_hash) = row.ok_or_else(wrong)?;
-    if !password::verify(body.password, password_hash).await? {
+    if !password::verify(&state.limiters.password_hashing, body.password, password_hash).await? {
         return Err(wrong());
     }
 

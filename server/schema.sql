@@ -79,3 +79,7 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     id TEXT PRIMARY KEY,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- When an invoice or action was claimed for an in-flight PayPal call (see release_stale_claims).
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
+ALTER TABLE actions ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;

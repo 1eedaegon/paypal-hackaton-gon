@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use sqlx::types::Json;
 use sqlx::PgPool;
@@ -125,7 +127,7 @@ pub async fn claim_for_sending(
     id: Uuid,
 ) -> AppResult<Option<InvoiceRow>> {
     let row = sqlx::query_as(&format!(
-        "UPDATE invoices SET status = $1 WHERE id = $2 AND user_id = $3 AND status = $4 RETURNING {COLUMNS}"
+        "UPDATE invoices SET status = $1, claimed_at = now() WHERE id = $2 AND user_id = $3 AND status = $4 RETURNING {COLUMNS}"
     ))
     .bind(STATUS_SENDING)
     .bind(id)
@@ -200,19 +202,36 @@ pub async fn record_reminder(db: &PgPool, id: Uuid) -> AppResult<()> {
     Ok(())
 }
 
-/// How many invoices this client (by email) has already paid the user.
-pub async fn paid_count_for_client(
-    db: &PgPool,
-    user_id: Uuid,
-    recipient_email: &str,
-) -> AppResult<i64> {
-    let (count,): (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM invoices WHERE user_id = $1 AND recipient_email = $2 AND status = $3",
+/// Paid invoice counts per client email, for "has this client paid before".
+pub async fn paid_counts_by_client(db: &PgPool, user_id: Uuid) -> AppResult<HashMap<String, i64>> {
+    let rows: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT recipient_email, COUNT(*) FROM invoices WHERE user_id = $1 AND status = $2 GROUP BY recipient_email",
     )
     .bind(user_id)
-    .bind(recipient_email)
     .bind(STATUS_PAID)
-    .fetch_one(db)
+    .fetch_all(db)
     .await?;
+    Ok(rows.into_iter().collect())
+}
+
+pub async fn count_drafts(db: &PgPool, user_id: Uuid) -> AppResult<i64> {
+    let (count,): (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM invoices WHERE user_id = $1 AND status = $2")
+            .bind(user_id)
+            .bind(STATUS_DRAFT)
+            .fetch_one(db)
+            .await?;
     Ok(count)
+}
+
+/// Returns claims abandoned mid-flight (crash, dropped connection) to a state the user can act on.
+pub async fn release_stale_claims(db: &PgPool) -> AppResult<u64> {
+    let result = sqlx::query(
+        "UPDATE invoices SET status = $1 WHERE status = $2 AND claimed_at < now() - interval '5 minutes'",
+    )
+    .bind(STATUS_DRAFT)
+    .bind(STATUS_SENDING)
+    .execute(db)
+    .await?;
+    Ok(result.rows_affected())
 }

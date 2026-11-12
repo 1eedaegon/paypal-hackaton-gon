@@ -48,8 +48,8 @@ grace periods, reminder counts or that they are a repeat client.\n\
 \n\
 Changing the policy:\n\
 - When the user tells you how they want clients chased, call set_policy with the complete updated policy \
-text (merge the change into the existing policy). Change auto_send only when the user explicitly asks to \
-turn automatic sending on or off.\n\
+text (merge the change into the existing policy). You cannot turn automatic sending on or off: \
+if the user asks, tell them to use the switch in the Policy tab.\n\
 \n\
 Current collection policy: {policy_text}\n\
 Auto-send reminders: {auto_send}"

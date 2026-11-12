@@ -1,6 +1,8 @@
 //! The tools the model can call. Every tool is scoped to the signed-in user, and none of them
 //! moves money or contacts a client without the approval rules in `service::actions`.
 
+use std::collections::HashMap;
+
 use chrono::{NaiveDate, Utc};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -17,6 +19,9 @@ use crate::service::actions::{propose, Proposal};
 use crate::service::{describe, today};
 use crate::state::AppState;
 use crate::validation::{required_text, validate_invoice, InvoiceInput};
+
+const MAX_INVOICES_FOR_MODEL: usize = 100;
+const MAX_OPEN_DRAFTS: i64 = 30;
 
 pub fn declarations() -> Value {
     json!([
@@ -72,8 +77,7 @@ pub fn declarations() -> Value {
             "parameters": {
                 "type": "OBJECT",
                 "properties": {
-                    "text": { "type": "STRING", "description": "The complete policy in plain language" },
-                    "auto_send": { "type": "BOOLEAN", "description": "Only when the user explicitly asks to change automatic sending" }
+                    "text": { "type": "STRING", "description": "The complete policy in plain language" }
                 },
                 "required": ["text"]
             }
@@ -112,7 +116,6 @@ struct FollowupArgs {
 #[derive(Deserialize)]
 struct PolicyArgs {
     text: String,
-    auto_send: Option<bool>,
 }
 
 fn parse_args<T: serde::de::DeserializeOwned>(args: &Value) -> AppResult<T> {
@@ -148,6 +151,11 @@ async fn draft_invoice(
 ) -> AppResult<(Value, Option<Effect>)> {
     let input = to_invoice_input(parse_args(args)?)?;
     let valid = validate_invoice(&input, today())?;
+    if invoices::count_drafts(&state.db, user.id).await? >= MAX_OPEN_DRAFTS {
+        return Err(AppError::invalid(
+            "There are too many unapproved drafts. Ask the user to approve or discard some first.",
+        ));
+    }
     let draft = invoices::insert_draft(&state.db, user.id, &valid).await?;
     let summary = format!(
         "Drafted invoice {} due {}",
@@ -176,17 +184,15 @@ async fn draft_invoice(
     ))
 }
 
-async fn describe_for_model(
-    state: &AppState,
-    user_id: Uuid,
-    invoice: &InvoiceRow,
-) -> AppResult<Value> {
+fn describe_for_model(invoice: &InvoiceRow, paid_by_client: &HashMap<String, i64>) -> Value {
     let days_since_reminder = invoice
         .last_reminded_at
         .map(|at| (Utc::now() - at).num_days());
-    let paid_before =
-        invoices::paid_count_for_client(&state.db, user_id, &invoice.recipient_email).await?;
-    Ok(json!({
+    let paid_before = paid_by_client
+        .get(&invoice.recipient_email)
+        .copied()
+        .unwrap_or(0);
+    json!({
         "invoice_id": invoice.id,
         "number": invoice.number,
         "client": invoice.recipient_name,
@@ -199,16 +205,22 @@ async fn describe_for_model(
         "reminder_count": invoice.reminder_count,
         "days_since_last_reminder": days_since_reminder,
         "client_paid_invoices": paid_before,
-    }))
+    })
 }
 
 async fn list_invoices(state: &AppState, user: &User) -> AppResult<(Value, Option<Effect>)> {
     let rows = invoices::list(&state.db, user.id).await?;
-    let mut described = Vec::with_capacity(rows.len());
-    for row in &rows {
-        described.push(describe_for_model(state, user.id, row).await?);
-    }
+    let paid_by_client = invoices::paid_counts_by_client(&state.db, user.id).await?;
     let unpaid = rows.iter().filter(|row| row.status == STATUS_SENT).count();
+    // Unpaid invoices first, so the cap never hides something that needs a decision.
+    let (open, closed): (Vec<&InvoiceRow>, Vec<&InvoiceRow>) =
+        rows.iter().partition(|row| row.status == STATUS_SENT);
+    let described: Vec<Value> = open
+        .into_iter()
+        .chain(closed)
+        .take(MAX_INVOICES_FOR_MODEL)
+        .map(|row| describe_for_model(row, &paid_by_client))
+        .collect();
     Ok((
         json!({ "invoices": described, "unpaid_count": unpaid }),
         None,
@@ -247,8 +259,8 @@ async fn set_policy(
 ) -> AppResult<(Value, Option<Effect>)> {
     let args: PolicyArgs = parse_args(args)?;
     let text = required_text(&args.text, "Policy", MAX_POLICY_LEN)?;
-    let current = policy::get(&state.db, user.id).await?;
-    let auto_send = args.auto_send.unwrap_or(current.auto_send);
+    // Automatic sending is the user's switch only (the Policy tab); the model cannot change it.
+    let auto_send = policy::get(&state.db, user.id).await?.auto_send;
     policy::upsert(&state.db, user.id, &text, auto_send).await?;
     activity::log(
         &state.db,
@@ -256,11 +268,11 @@ async fn set_policy(
         None,
         ACTOR_AGENT,
         "policy_updated",
-        "Updated the collection policy",
+        "Updated the collection policy text",
     )
     .await?;
     Ok((
-        json!({ "outcome": "policy saved", "auto_send": auto_send }),
+        json!({ "outcome": "policy text saved. Automatic sending can only be changed by the user in the Policy tab." }),
         Some(Effect::PolicyUpdated),
     ))
 }

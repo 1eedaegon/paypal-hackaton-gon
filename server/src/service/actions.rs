@@ -1,9 +1,10 @@
+use chrono::{Duration, Utc};
 use uuid::Uuid;
 
 use super::describe;
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    Effect, ACTION_EXECUTED, ACTION_PENDING, ACTION_REJECTED, ACTION_REMIND, ACTION_SUPERSEDED,
+    Effect, InvoiceRow, ACTION_EXECUTED, ACTION_PENDING, ACTION_REJECTED, ACTION_REMIND, ACTION_SUPERSEDED,
     ACTION_WAIT, STATUS_SENT,
 };
 use crate::repo::actions::{NewAction, ACTION_EXECUTING};
@@ -15,6 +16,8 @@ use crate::validation::required_text;
 pub const MAX_SUBJECT_LEN: usize = 200;
 pub const MAX_MESSAGE_LEN: usize = 2000;
 const MAX_REASONING_LEN: usize = 1000;
+const MAX_REMINDERS_PER_INVOICE: i32 = 6;
+const REMINDER_COOLDOWN_HOURS: i64 = 20;
 
 /// A follow-up the agent wants to take on one invoice.
 pub struct Proposal {
@@ -109,6 +112,25 @@ pub async fn propose(
     Ok(Effect::ActionProposed { action_id })
 }
 
+/// Hard limits on contacting a client, whatever the policy text or the model says.
+fn ensure_reminder_allowed(invoice: &InvoiceRow) -> AppResult<()> {
+    if invoice.reminder_count >= MAX_REMINDERS_PER_INVOICE {
+        return Err(AppError::Conflict(format!(
+            "This invoice already had {MAX_REMINDERS_PER_INVOICE} reminders, which is the maximum."
+        )));
+    }
+    let cooldown = Duration::hours(REMINDER_COOLDOWN_HOURS);
+    if invoice
+        .last_reminded_at
+        .is_some_and(|at| Utc::now() - at < cooldown)
+    {
+        return Err(AppError::Conflict(format!(
+            "A reminder for this invoice already went out in the last {REMINDER_COOLDOWN_HOURS} hours."
+        )));
+    }
+    Ok(())
+}
+
 /// Sends a pending reminder through PayPal exactly once. On failure it stays pending with the error attached.
 pub async fn execute(
     state: &AppState,
@@ -122,6 +144,8 @@ pub async fn execute(
             "This decision has nothing to send.".into(),
         ));
     }
+    let before = invoices::find(&state.db, user_id, action.invoice_id).await?;
+    ensure_reminder_allowed(&before)?;
     if !actions::claim_for_execution(&state.db, user_id, action_id).await? {
         return Err(AppError::Conflict(
             "This reminder was already handled.".into(),
@@ -220,4 +244,48 @@ pub async fn edit(
     let subject = required_text(subject, "Subject", MAX_SUBJECT_LEN)?;
     let message = required_text(message, "Message", MAX_MESSAGE_LEN)?;
     actions::update_text(&state.db, user_id, action_id, &subject, &message).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::types::Json;
+
+    fn sent_invoice(reminder_count: i32, last_reminded_hours_ago: Option<i64>) -> InvoiceRow {
+        InvoiceRow {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            status: STATUS_SENT.into(),
+            paypal_invoice_id: Some("INV2-TEST".into()),
+            number: Some("0001".into()),
+            recipient_name: "Client".into(),
+            recipient_email: "c@example.com".into(),
+            items: Json(vec![]),
+            total_cents: 10_000,
+            due_date: Utc::now().date_naive(),
+            note: String::new(),
+            pay_url: None,
+            reminder_count,
+            last_reminded_at: last_reminded_hours_ago.map(|hours| Utc::now() - Duration::hours(hours)),
+            created_at: Utc::now(),
+            sent_at: None,
+            paid_at: None,
+        }
+    }
+
+    #[test]
+    fn allows_first_reminder_and_one_after_the_cooldown() {
+        assert!(ensure_reminder_allowed(&sent_invoice(0, None)).is_ok());
+        assert!(ensure_reminder_allowed(&sent_invoice(1, Some(REMINDER_COOLDOWN_HOURS + 1))).is_ok());
+    }
+
+    #[test]
+    fn blocks_reminder_inside_the_cooldown() {
+        assert!(ensure_reminder_allowed(&sent_invoice(1, Some(1))).is_err());
+    }
+
+    #[test]
+    fn blocks_reminder_past_the_per_invoice_maximum() {
+        assert!(ensure_reminder_allowed(&sent_invoice(MAX_REMINDERS_PER_INVOICE, Some(100))).is_err());
+    }
 }

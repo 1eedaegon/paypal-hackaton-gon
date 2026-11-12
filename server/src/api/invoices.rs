@@ -10,7 +10,7 @@ use crate::error::{ok, AppResult};
 use crate::models::{ActionDto, InvoiceDto};
 use crate::repo::activity::ACTOR_USER;
 use crate::repo::{actions, activity, invoices};
-use crate::service::{self, today};
+use crate::service::{self, detached, throttle_paypal, today};
 use crate::state::AppState;
 use crate::validation::{validate_invoice, InvoiceInput};
 
@@ -79,7 +79,9 @@ async fn send(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
-    let invoice = service::invoices::send(&state, &user, id).await?;
+    // Runs to completion even if the browser disconnects, so a claimed draft is never left half sent.
+    let task_state = state.clone();
+    let invoice = detached(async move { service::invoices::send(&task_state, &user, id).await }).await?;
     Ok(ok(
         json!({ "invoice": InvoiceDto::from_row(invoice, today()) }),
     ))
@@ -90,6 +92,7 @@ async fn record_payment(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
+    throttle_paypal(&state, user.id)?;
     let invoice = service::invoices::record_payment(&state, &user, id).await?;
     Ok(ok(
         json!({ "invoice": InvoiceDto::from_row(invoice, today()) }),
@@ -101,6 +104,7 @@ async fn sync(
     AuthUser(user): AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<impl IntoResponse> {
+    throttle_paypal(&state, user.id)?;
     let invoice = service::invoices::sync(&state, &user, id).await?;
     Ok(ok(
         json!({ "invoice": InvoiceDto::from_row(invoice, today()) }),

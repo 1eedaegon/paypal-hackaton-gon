@@ -44,8 +44,8 @@ Open the invoice, follow its **PayPal payment link**, and log in with this sandb
 
 | | |
 |---|---|
-| Sandbox buyer email | SANDBOX_BUYER_EMAIL_PLACEHOLDER |
-| Sandbox buyer password | SANDBOX_BUYER_PASSWORD_PLACEHOLDER |
+| Sandbox buyer email | `sb-sfd9r53881494@personal.example.com` |
+| Sandbox buyer password | `cUL$sH60` |
 
 Everything runs against the PayPal **sandbox**. No real money moves and no real client is contacted.
 
@@ -70,7 +70,7 @@ PayPal is the source of truth for payment state. A webhook is treated only as a 
 | `propose_followup` | Records one decision per invoice: a reminder (subject + message) or a wait, with reasoning. |
 | `set_policy` | Stores the collection policy the user described. |
 
-Guardrails are enforced in code, not in the prompt: every tool is scoped to the signed-in user; the agent can never send a new invoice; reminders go to the approvals inbox unless the user turned on auto-send; all tool arguments are validated server side; text pasted from a client is treated as data.
+Guardrails are enforced in code, not in the prompt: every tool is scoped to the signed-in user; the agent can never send a new invoice; reminders go to the approvals inbox unless the user turned on auto-send, and only the user can flip that switch (the model has no tool for it); all tool arguments are validated server side; text pasted from a client is treated as data.
 
 AI coding assistance: the code was written with Claude Code.
 
@@ -84,7 +84,7 @@ server/   Rust (axum, sqlx, reqwest): JSON API, agent loop, PayPal client, serve
 
 One container serves both the API (`/api`) and the built SPA. See `docs/api.md` for the API contract.
 
-Abuse protection for a public demo: accounts with Argon2-hashed passwords and HttpOnly session cookies, same-origin checks on state-changing requests, per-user and global daily limits on agent runs and invoices sent, and rate limiting on sign-up and login.
+Abuse protection for a public demo: accounts with Argon2-hashed passwords and HttpOnly session cookies, same-origin checks on state-changing requests, per-user and global daily limits on agent runs and invoices sent, rate limiting on sign-up, login and PayPal-calling endpoints, and hard limits on reminders per invoice (one per 20 hours, six in total) that hold whatever the policy text or the model says.
 
 ## Run it locally
 
@@ -101,7 +101,7 @@ For frontend development with hot reload, run `npm run dev` in `web/` (it proxie
 
 Note for sandbox setup: PayPal does not let a merchant account send invoices to a payer account in certain same-country combinations (for example Korea to Korea). Use a sandbox buyer from a different country than the sandbox merchant if you want to pay invoices.
 
-To receive webhooks, register `https://<your-host>/api/webhooks/paypal` for the invoicing events in the PayPal developer dashboard and set `PAYPAL_WEBHOOK_ID`. Without it, the reconciler still picks up payments within about 45 seconds.
+To receive webhooks, register `https://<your-host>/api/webhooks/paypal` for the invoicing events in the PayPal developer dashboard and set `PAYPAL_WEBHOOK_ID`. Without it, webhook calls are rejected (they cannot be verified) and the reconciler picks up payments within about 45 seconds.
 
 ### Tests
 

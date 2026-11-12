@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::Argon2;
+use tokio::sync::Semaphore;
 
 fn hash_blocking(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
@@ -21,12 +22,14 @@ fn verify_blocking(password: &str, stored_hash: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Argon2 is CPU heavy, so it runs off the async executor.
-pub async fn hash(password: String) -> Result<String> {
+/// Argon2 is CPU and memory heavy: it runs off the async executor, a few at a time.
+pub async fn hash(permits: &Semaphore, password: String) -> Result<String> {
+    let _permit = permits.acquire().await?;
     tokio::task::spawn_blocking(move || hash_blocking(&password)).await?
 }
 
-pub async fn verify(password: String, stored_hash: String) -> Result<bool> {
+pub async fn verify(permits: &Semaphore, password: String, stored_hash: String) -> Result<bool> {
+    let _permit = permits.acquire().await?;
     Ok(tokio::task::spawn_blocking(move || verify_blocking(&password, &stored_hash)).await?)
 }
 

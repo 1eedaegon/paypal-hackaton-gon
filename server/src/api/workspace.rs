@@ -15,7 +15,7 @@ use crate::models::{
 use crate::money::format_cents;
 use crate::repo::activity::ACTOR_USER;
 use crate::repo::{actions, activity, invoices, policy, usage};
-use crate::service::{self, today};
+use crate::service::{self, detached, today};
 use crate::state::AppState;
 use crate::validation::optional_text;
 
@@ -141,7 +141,8 @@ pub async fn seed(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> AppResult<impl IntoResponse> {
-    let rows = service::seed::load(&state, &user).await?;
+    let task_state = state.clone();
+    let rows = detached(async move { service::seed::load(&task_state, &user).await }).await?;
     let today = today();
     let dtos: Vec<InvoiceDto> = rows
         .into_iter()

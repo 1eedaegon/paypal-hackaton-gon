@@ -22,6 +22,7 @@ use anyhow::Context;
 use axum::middleware;
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
+use tokio::sync::Semaphore;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
@@ -31,12 +32,18 @@ use crate::config::Config;
 use crate::error::AppError;
 use crate::paypal::PayPal;
 use crate::rate_limit::RateLimiter;
-use crate::state::AppState;
+use crate::state::{AppState, Limiters};
 
 const MAX_BODY_BYTES: usize = 256 * 1024;
 const DB_MAX_CONNECTIONS: u32 = 8;
-const AUTH_ATTEMPTS_PER_WINDOW: u32 = 20;
-const AUTH_WINDOW: Duration = Duration::from_secs(10 * 60);
+const MINUTE: Duration = Duration::from_secs(60);
+const TEN_MINUTES: Duration = Duration::from_secs(10 * 60);
+const HOUR: Duration = Duration::from_secs(60 * 60);
+const SIGNUPS_PER_HOUR: u32 = 6;
+const LOGINS_PER_TEN_MINUTES: u32 = 30;
+const PAYPAL_CALLS_PER_MINUTE: u32 = 30;
+const WEBHOOKS_PER_MINUTE: u32 = 120;
+const CONCURRENT_PASSWORD_HASHES: usize = 4;
 const RECONCILE_INTERVAL: Duration = Duration::from_secs(45);
 
 /// Periodically compares unpaid invoices with PayPal, in case a webhook was missed.
@@ -95,7 +102,13 @@ async fn main() -> anyhow::Result<()> {
         db,
         paypal: PayPal::new(&cfg)?,
         gemini: Gemini::new(&cfg)?,
-        auth_limiter: Arc::new(RateLimiter::new(AUTH_ATTEMPTS_PER_WINDOW, AUTH_WINDOW)),
+        limiters: Arc::new(Limiters {
+            signup: RateLimiter::new(SIGNUPS_PER_HOUR, HOUR),
+            login: RateLimiter::new(LOGINS_PER_TEN_MINUTES, TEN_MINUTES),
+            paypal: RateLimiter::new(PAYPAL_CALLS_PER_MINUTE, MINUTE),
+            webhook: RateLimiter::new(WEBHOOKS_PER_MINUTE, MINUTE),
+            password_hashing: Semaphore::new(CONCURRENT_PASSWORD_HASHES),
+        }),
         cfg: Arc::new(cfg),
     };
     spawn_reconciler(state.clone());

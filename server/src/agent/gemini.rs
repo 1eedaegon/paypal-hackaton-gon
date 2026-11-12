@@ -120,7 +120,8 @@ fn parse_turn(response: &Value) -> AppResult<ModelTurn> {
         .as_array()
         .filter(|parts| !parts.is_empty())
         .ok_or_else(|| {
-            tracing::warn!(response = %response, "Gemini returned no content");
+            let reason = response["candidates"][0]["finishReason"].as_str().unwrap_or("unknown");
+            tracing::warn!(%reason, "Gemini returned no content");
             AppError::Upstream(
                 "The AI model returned an empty answer. Please rephrase and try again.".into(),
             )

@@ -21,6 +21,7 @@ use crate::state::AppState;
 pub use self::prompt::MAX_POLICY_LEN;
 
 const MAX_STEPS: usize = 8;
+const RUN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(100);
 const MAX_TOOL_CALLS_PER_RUN: usize = 40;
 const MAX_MESSAGES: usize = 20;
 const MAX_MESSAGE_CHARS: usize = 6000;
@@ -96,6 +97,15 @@ async fn run_tools(
 /// The agent loop: ask the model, run the tools it calls, feed the results back, until it answers in text.
 async fn run(state: &AppState, user: &User, initial: Vec<Value>) -> AppResult<Outcome> {
     usage::consume_agent_call(&state.db, &state.cfg, user.id).await?;
+    match tokio::time::timeout(RUN_TIMEOUT, run_loop(state, user, initial)).await {
+        Ok(outcome) => outcome,
+        Err(_) => Err(AppError::Upstream(
+            "The AI model took too long. Anything it already prepared is saved; please try again.".into(),
+        )),
+    }
+}
+
+async fn run_loop(state: &AppState, user: &User, initial: Vec<Value>) -> AppResult<Outcome> {
     let current_policy = policy::get(&state.db, user.id).await?;
     let system = system_prompt(&user.name, today(), &current_policy);
     let declarations = tools::declarations();

@@ -127,7 +127,7 @@ pub async fn update_text(
 /// Moves a pending action to `executing`. Returns false when someone else already handled it.
 pub async fn claim_for_execution(db: &PgPool, user_id: Uuid, id: Uuid) -> AppResult<bool> {
     let result = sqlx::query(
-        "UPDATE actions SET status = $1 WHERE id = $2 AND user_id = $3 AND status = $4",
+        "UPDATE actions SET status = $1, claimed_at = now() WHERE id = $2 AND user_id = $3 AND status = $4",
     )
     .bind(ACTION_EXECUTING)
     .bind(id)
@@ -158,4 +158,16 @@ pub async fn transition(
     .execute(db)
     .await?;
     Ok(result.rows_affected() == 1)
+}
+
+/// Returns reminders abandoned mid-send (crash, dropped connection) to the approvals inbox.
+pub async fn release_stale_claims(db: &PgPool) -> AppResult<u64> {
+    let result = sqlx::query(
+        "UPDATE actions SET status = $1 WHERE status = $2 AND claimed_at < now() - interval '5 minutes'",
+    )
+    .bind(ACTION_PENDING)
+    .bind(ACTION_EXECUTING)
+    .execute(db)
+    .await?;
+    Ok(result.rows_affected())
 }
