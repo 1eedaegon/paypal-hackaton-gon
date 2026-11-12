@@ -5,7 +5,7 @@
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 
 - **Live demo:** https://duely-00dj.onrender.com (hosted on a free instance: the first request after a quiet period can take up to a minute to wake it)
-- **Demo video (1:45):** https://youtu.be/yihtuxg3vHM
+- **Demo video (2:36):** https://youtu.be/I7CNx8gMa9g
 - **Test account:** see [Try it](#try-it)
 
 ## The problem
