@@ -77,7 +77,11 @@ pub async fn propose(
     }
 
     let subject = required_text(&proposal.subject, "Subject", MAX_SUBJECT_LEN)?;
-    let message = required_text(&proposal.message, "Message", MAX_MESSAGE_LEN)?;
+    let message = required_text(
+        &unescape_newlines(&proposal.message),
+        "Message",
+        MAX_MESSAGE_LEN,
+    )?;
     let new = NewAction {
         user_id,
         invoice_id: invoice.id,
@@ -110,6 +114,11 @@ pub async fn propose(
         return Ok(Effect::ActionExecuted { action_id });
     }
     Ok(Effect::ActionProposed { action_id })
+}
+
+/// Models sometimes write line breaks as the two characters `\\n`. Clients must get real line breaks.
+fn unescape_newlines(text: &str) -> String {
+    text.replace("\\r\\n", "\n").replace("\\n", "\n")
 }
 
 /// Hard limits on contacting a client, whatever the policy text or the model says.
@@ -277,6 +286,15 @@ mod tests {
     fn allows_first_reminder_and_one_after_the_cooldown() {
         assert!(ensure_reminder_allowed(&sent_invoice(0, None)).is_ok());
         assert!(ensure_reminder_allowed(&sent_invoice(1, Some(REMINDER_COOLDOWN_HOURS + 1))).is_ok());
+    }
+
+    #[test]
+    fn turns_escaped_line_breaks_into_real_ones() {
+        assert_eq!(
+            unescape_newlines("Hi team,\\r\\n\\r\\nInvoice 7 is due.\\nBest,\\nMina"),
+            "Hi team,\n\nInvoice 7 is due.\nBest,\nMina"
+        );
+        assert_eq!(unescape_newlines("Already\nfine"), "Already\nfine");
     }
 
     #[test]
