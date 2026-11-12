@@ -5,7 +5,7 @@
 Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/).
 
 - **Live demo:** https://duely-00dj.onrender.com (hosted on a free instance: the first request after a quiet period can take up to a minute to wake it)
-- **Demo video (2:40):** https://youtu.be/4aJrnQSGbA4
+- **Demo video (2:40):** https://youtu.be/ylH9Hk_fwSY
 - **Test account:** see [Try it](#try-it)
 
 ![The approvals inbox: one decision per unpaid invoice, each with the agent's reasoning](docs/duely-3-approvals.png)
