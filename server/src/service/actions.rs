@@ -117,7 +117,7 @@ pub async fn propose(
 }
 
 /// Models sometimes write line breaks as the two characters `\\n`. Clients must get real line breaks.
-fn unescape_newlines(text: &str) -> String {
+pub fn unescape_newlines(text: &str) -> String {
     text.replace("\\r\\n", "\n").replace("\\n", "\n")
 }
 

@@ -15,7 +15,7 @@ use crate::models::{Effect, InvoiceItem, InvoiceRow, User, STATUS_SENT};
 use crate::money::format_cents;
 use crate::repo::activity::ACTOR_AGENT;
 use crate::repo::{activity, invoices, policy};
-use crate::service::actions::{propose, Proposal};
+use crate::service::actions::{propose, unescape_newlines, Proposal};
 use crate::service::{describe, today};
 use crate::state::AppState;
 use crate::validation::{required_text, validate_invoice, InvoiceInput};
@@ -277,6 +277,21 @@ async fn set_policy(
     ))
 }
 
+/// Applies `unescape_newlines` to every string in the model's arguments, so text it wrote with
+/// escaped line breaks is stored and sent with real ones.
+fn unescape_strings(value: &Value) -> Value {
+    match value {
+        Value::String(text) => Value::String(unescape_newlines(text)),
+        Value::Array(items) => Value::Array(items.iter().map(unescape_strings).collect()),
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, item)| (key.clone(), unescape_strings(item)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
 /// Runs one tool call. Problems the model can fix (bad arguments, PayPal refusals) come back as an
 /// `error` result for it to read; only internal failures abort the run.
 pub async fn execute(
@@ -284,11 +299,12 @@ pub async fn execute(
     user: &User,
     call: &FunctionCall,
 ) -> AppResult<(Value, Option<Effect>)> {
+    let args = unescape_strings(&call.args);
     let outcome = match call.name.as_str() {
-        "draft_invoice" => draft_invoice(state, user, &call.args).await,
+        "draft_invoice" => draft_invoice(state, user, &args).await,
         "list_invoices" => list_invoices(state, user).await,
-        "propose_followup" => propose_followup(state, user, &call.args).await,
-        "set_policy" => set_policy(state, user, &call.args).await,
+        "propose_followup" => propose_followup(state, user, &args).await,
+        "set_policy" => set_policy(state, user, &args).await,
         other => Err(AppError::invalid(format!("Unknown tool \"{other}\"."))),
     };
     match outcome {
@@ -334,6 +350,17 @@ mod tests {
     #[test]
     fn rejects_arguments_missing_required_fields() {
         assert!(parse_args::<FollowupArgs>(&json!({ "invoice_id": "x" })).is_err());
+    }
+
+    #[test]
+    fn unescapes_line_breaks_in_nested_tool_arguments() {
+        let cleaned = unescape_strings(&json!({
+            "message": "Hi,\\n\\nThanks",
+            "items": [{ "name": "A\\nB", "quantity": 1 }]
+        }));
+        assert_eq!(cleaned["message"], "Hi,\n\nThanks");
+        assert_eq!(cleaned["items"][0]["name"], "A\nB");
+        assert_eq!(cleaned["items"][0]["quantity"], 1);
     }
 
     #[test]
